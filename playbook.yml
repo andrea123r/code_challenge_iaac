@@ -36,6 +36,11 @@
       java_packages:
         - java-1.8.0-openjdk
   tasks:
+  - name: Ensure group "docker" exists
+  group:
+    name: docker
+    state: present
+    
   - name: add several users
   user:
     name: "{{ item }}"
