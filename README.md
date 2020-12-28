@@ -69,3 +69,4 @@ $ ansible-galaxy install -r requirements.yml
 nel file inventory si vanno a definire i vari hosts dell'infrastruttura
 si va a cambiare il contenuto del playbook e si lancia ansible
 
+ansible-playbook -i inventory.yml playbook.yml -u ec2-user
