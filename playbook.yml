@@ -1,0 +1,136 @@
+---
+- hosts: all
+
+  vars:
+    docker_users:
+      - ec2-user
+      - test
+
+  become: yes
+
+  pre_tasks:
+    - name: Update packages
+      raw: bash -c "[[ -f /usr/bin/yum ]] && yum --assumeyes update"
+      register: output
+      changed_when: output.stdout != "\r\n"
+
+    - name: Install python for Ansible
+      raw: bash -c "[[ -f /usr/bin/yum ]] && yum --assumeyes install python"
+      register: output
+      changed_when: output.stdout != "\r\n"
+
+    - name: Gathering Facts
+      setup:
+  
+  roles:
+    # Play role common with base packages
+    - role: common
+
+    # Play role docker-rhel to install docker and docker-compose
+    - role: docker-rhel
+      when: "ansible_os_family == 'RedHat'"
+
+    # Play role geerlingguy.java to install java
+    - role: geerlingguy.java
+      when: "ansible_os_family == 'RedHat'"
+      java_packages:
+        - java-1.8.0-openjdk
+  tasks:
+  - name: add several users
+  user:
+    name: "{{ item }}"
+    groups: "docker"
+    append: true
+  loop: "{{ docker__users }}"
+
+  - name: Configure Docker daemon options (json)
+    template:
+      src: "etc/docker/daemon.json.j2"
+      dest: "/etc/docker/daemon.json"
+      owner: "root"
+      group: "root"
+     when: docker__default_daemon_json | d() or docker__daemon_json | d()
+     notify: ["Restart Docker"]
+
+  - name: Configure Docker daemon options (flags)
+    template:
+      src: "etc/systemd/system/docker.service.d/options.conf.j2"
+      dest: "/etc/systemd/system/docker.service.d/options.conf"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+      register: docker__register_daemon_flags
+     when: docker__daemon_flags | d()
+     notify: ["Restart Docker"]
+
+  - name: Configure Docker daemon environment variables
+    template:
+      src: "etc/systemd/system/docker.service.d/environment.conf.j2"
+      dest: "/etc/systemd/system/docker.service.d/environment.conf"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+      register: docker__register_daemon_environment
+     when: docker__daemon_environment | d()
+     notify: ["Restart Docker"]
+
+  - name: Configure custom systemd unit file override
+   template:
+     src: "etc/systemd/system/docker.service.d/custom.conf.j2"
+     dest: "/etc/systemd/system/docker.service.d/custom.conf"
+     owner: "root"
+     group: "root"
+     mode: "0644"
+   register: docker__register_custom_override
+   when: docker__systemd_override | d()
+   notify: ["Restart Docker"]
+
+  - name: Reload systemd daemon
+   systemd:
+    daemon_reload: true
+   when: docker__register_daemon_flags is changed
+        or docker__register_daemon_environment is changed
+        or docker__register_custom_override is changed
+
+ - name: Restart Docker now to make sure `docker login` works
+    meta: "flush_handlers"
+
+ - name: Manage Docker registry login credentials
+    docker_login:
+      registry_url: "{{ item.registry_url | d(omit) }}"
+      username: "{{ item.username }}"
+      password: "{{ item.password }}"
+      email: "{{ item.email | d(omit) }}"
+      reauthorize: "{{ item.reauthorize | d(omit) }}"
+      config_path: "{{ item.config_path | d((ansible_env.PWD | d('/root')) + '/.docker/config.json') }}"
+      state: "{{ item.state | d('present') }}"
+    loop: "{{ docker__registries }}"
+    when: item.username | d() and item.password | d()
+   vars:
+      ansible_python_interpreter: "{{ '/usr/bin/env python'}"
+
+ - name: Remove Docker related cron jobs
+   file:
+     path: "/etc/cron.d/{{ item.cron_file }}"
+     state: "absent"
+   loop: "{{ docker__cron_jobs }}"
+   when:
+    - item.state | d("present") == "absent"
+    - item.cron_file | d()
+
+ - name: Create Docker related cron jobs
+  cron:
+    name: "{{ item.name }}"
+    job: "{{ item.job }}"
+    minute: "{{ item.schedule[0] }}"
+    hour: "{{ item.schedule[1] }}"
+    day: "{{ item.schedule[2] }}"
+    month: "{{ item.schedule[3] }}"
+    weekday: "{{ item.schedule[4] }}"
+    cron_file: "{{ item.cron_file }}"
+    user: "{{ item.user | d('root') }}"
+  loop: "{{ docker__cron_jobs }}"
+  when:
+    - item.state | d("present") != "absent"
+    - item.name | d() and item.job | d()
+    - item.schedule | d() and item.cron_file | d()
