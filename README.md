@@ -1,5 +1,5 @@
 # code_challenge_iaac
-per svolgere il provisioning delle due VM CentOS ho utilizzato il cloud provider AWS e ho lanciato due istanze EC2 c4.8xlarge, assegnando ad ognuna di esse un elastic ip adress. Per connettermi alle due istanze ho usato PuTTY.
+per svolgere il provisioning delle due VM CentOS ho utilizzato il cloud provider AWS e ho lanciato due istanze EC2 c4.8xlarge, assegnando ad ognuna di esse un elastic ip adress. Per connettermi alle due istanze ho usato PuTTY. Una volta connesso ho scritto questi commandi:
 
 ssh -i "ad.pem" centos@ec2-54-145-245-118.compute-1.amazonaws.com
 
