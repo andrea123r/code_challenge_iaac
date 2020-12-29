@@ -17,21 +17,27 @@ cd /etc/
 cd ssh
 
 vi sshd_config
+
 una volta fatto ciò si può passare al test user dopo un logout per ogni VM
 
 ssh test@54.145.245.118
+
 una volta connessi con l'ec2-user si va a aggiungere nel file etc/sudoers il test user
 
 vi etc/sudoers
+
 si passa al test user
 
 su - test
+
 una volta entrati si usa il private ip dell'altra vm
 
 $ ssh test@3.88.77.89
+
 si genera una chiave per far si entri nelle vm con le stesse chiavi
 
 $ ssh key-gen
+
 per installare ansible
 
 $ sudo yum makecache
@@ -41,11 +47,13 @@ $ sudo yum install epel-release
 $ sudo yum makecache
 
 $ sudo yum install ansible
+
 per gestire i server, in questo file si inseriscono i dati delle due macchine virtuali(private IPs e nome server)
 
 $ sudo vi /etc/hosts
 
 $ ssh-copy-id test@vm2.linuxhint.local
+
 Si lancia questo commando su ogni server per permettere l'accesso da root senza password per l'utente
 
 $ echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$(whoami)
