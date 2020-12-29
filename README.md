@@ -58,6 +58,10 @@ Si lancia questo commando su ogni server per permettere l'accesso da root senza 
 
 $ echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$(whoami)
 
+con questo commando controlliamo se ci sono problemi di connettività per Ansible
+
+ansible -m ping all
+
 #Una volta fatto questo si creano i file inventory.yml, requirements.yml e playbook
 una volta modificato il file requiremnents si istallano roles multipli da un file
 
